@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>V-STOCK EXTREME | ELVOXI</title>
+    <title>V-STOCK CLOUD | ELVOXI</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    
     <style>
         :root {
             --neon: #00ff41;
@@ -27,28 +31,27 @@
         }
 
         .card {
-            background: rgba(15, 15, 15, 0.9);
+            background: rgba(15, 15, 15, 0.95);
             border: 2px solid var(--neon);
-            box-shadow: 0 0 20px var(--neon);
+            box-shadow: 0 0 25px var(--neon);
             border-radius: 5px;
             padding: 40px;
             width: 90%;
             max-width: 450px;
             text-align: center;
             z-index: 10;
-            position: relative;
         }
 
-        .card.maintenance { border-color: var(--danger); box-shadow: 0 0 20px var(--danger); }
+        .card.maintenance { border-color: var(--danger); box-shadow: 0 0 25px var(--danger); }
 
-        h1 { font-size: 1.5rem; letter-spacing: 3px; margin-bottom: 5px; text-shadow: 0 0 10px var(--neon); }
-        .powered-by { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin-bottom: 25px; opacity: 0.7; }
+        h1 { font-size: 1.6rem; letter-spacing: 3px; margin-bottom: 5px; text-shadow: 0 0 10px var(--neon); }
+        .powered-by { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin-bottom: 25px; opacity: 0.8; }
 
         .stock-badge {
             background: rgba(0, 255, 65, 0.1);
             padding: 15px;
             border: 1px dashed var(--neon);
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             margin-bottom: 25px;
             color: var(--neon);
         }
@@ -61,74 +64,54 @@
             font-weight: bold;
             cursor: pointer;
             width: 100%;
-            font-size: 1rem;
+            font-size: 1.1rem;
             transition: 0.3s;
             clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
         }
 
-        .btn-main:disabled { background: #333; color: #666; cursor: not-allowed; clip-path: none; }
+        .btn-main:disabled { background: #222; color: #444; cursor: not-allowed; clip-path: none; }
         .btn-main.mt-active { background: var(--danger); color: white; }
 
-        /* MODAL RESULT (POPUP KECE) */
+        /* POPUP RESULT */
         .result-overlay {
             display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 1000;
+            background: rgba(0,0,0,0.98); z-index: 1000;
             justify-content: center; align-items: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
         }
 
         .result-box {
-            background: #0a0a0a;
+            background: #000;
             border: 2px solid var(--cyber-blue);
             padding: 30px;
             width: 85%;
-            max-width: 450px;
+            max-width: 420px;
             text-align: center;
-            box-shadow: 0 0 40px var(--cyber-blue);
-            border-radius: 10px;
+            box-shadow: 0 0 50px var(--cyber-blue);
         }
 
-        .result-title { color: var(--cyber-blue); font-size: 1.5rem; margin-bottom: 15px; text-shadow: 0 0 10px var(--cyber-blue); }
-        
-        .data-label { font-size: 12px; color: #888; margin-bottom: 5px; text-align: left; }
         .copy-area {
-            background: #000;
+            background: #0a0a0a;
             border: 1px solid var(--cyber-blue);
             color: #fff;
             padding: 15px;
-            margin-bottom: 20px;
+            margin: 20px 0;
             word-break: break-all;
-            font-family: sans-serif;
             font-size: 14px;
-            border-radius: 5px;
-            box-shadow: inset 0 0 10px rgba(0, 212, 255, 0.2);
+            border-radius: 4px;
         }
 
         .instruction-box {
             background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 5px;
+            padding: 12px;
             text-align: left;
             font-size: 11px;
-            line-height: 1.6;
-            margin-bottom: 20px;
             border-left: 3px solid var(--warning);
+            margin-bottom: 20px;
         }
 
-        .btn-copy {
-            background: var(--cyber-blue);
-            color: black;
-            border: none;
-            padding: 12px;
-            width: 100%;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        /* ADMIN PANEL */
+        /* ADMIN OVERLAY */
         .overlay {
             display: none; position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -138,159 +121,164 @@
 
         input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--neon); padding: 12px; margin-bottom: 15px; outline: none; }
         
-        #cooldownMsg { color: var(--danger); margin-top: 15px; font-weight: bold; font-size: 0.8rem; }
+        #cooldownMsg { color: var(--danger); margin-top: 15px; font-weight: bold; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
 <div class="card" id="mainCard">
-    <h1>V-STOCK AM</h1>
+    <h1 id="brandTitle">V-STOCK CLOUD</h1>
     <div class="powered-by">POWERED BY : ELVOXI</div>
     
-    <div class="stock-badge">STOCK: <span id="stokSkrg">0</span></div>
+    <div class="stock-badge">STOCK: <span id="stokSkrg">...</span></div>
     
     <button class="btn-main" id="btnAmbil" onclick="ambilStok()">AMBIL STOCK AM PREM</button>
     <div id="cooldownMsg" style="display: none;"></div>
     
-    <button onclick="showLogin()" style="background:none; border:none; color:#222; margin-top:30px; cursor:pointer; font-size: 9px; letter-spacing: 1px;">[ DATABASE ACCESS ]</button>
+    <button onclick="showLogin()" style="background:none; border:none; color:#1a1a1a; margin-top:40px; cursor:pointer; font-size: 10px;">[ DATABASE ACCESS ]</button>
 </div>
 
 <div id="resultLayer" class="result-overlay">
     <div class="result-box">
-        <div class="result-title">ACCESS GRANTED</div>
+        <h2 style="color: var(--cyber-blue); margin: 0;">SUCCESS!</h2>
         <div style="font-size: 10px; color: var(--cyber-blue); margin-bottom: 20px;">POWERED BY : ELVOXI</div>
         
-        <div class="data-label">DATA AKUN:</div>
         <div id="textHasil" class="copy-area"></div>
         
-        <button class="btn-copy" onclick="copyText()">COPY ACCOUNT DATA</button>
+        <button class="btn-main" style="background: var(--cyber-blue); clip-path:none; color:black; margin-bottom: 15px;" onclick="copyText()">COPY DATA</button>
 
         <div class="instruction-box">
             <b style="color: var(--warning);">INFO LOGIN:</b><br>
             1. BUAT YANG GAK TAU CARA LOGININ NYA<br>
-            BISA PV TELEGRAM : <span style="color: var(--cyber-blue);">@Elvoxi_Reals01</span>
+            BISA PV TELEGRAM : @Elvoxi_Reals01
         </div>
 
-        <button onclick="closeResult()" style="background:none; border:none; color:#555; cursor:pointer; font-size: 12px;">CLOSE SYSTEM</button>
+        <button onclick="closeResult()" style="background:none; border:none; color:grey; cursor:pointer;">CLOSE WINDOW</button>
     </div>
 </div>
 
 <div id="loginLayer" class="overlay">
     <div style="width: 300px; border: 1px solid var(--neon); padding: 25px; background: #000;">
-        <h3 style="color: var(--neon); margin-top:0;">ADMIN KEY</h3>
         <input type="password" id="passInput" placeholder="PASSWORD">
-        <button class="btn-main" onclick="cekPassword()">VERIFY</button>
-        <button onclick="closeAll()" style="color:red; background:none; border:none; margin-top:15px; cursor:pointer; width:100%;">CANCEL</button>
+        <button class="btn-main" onclick="cekPassword()">LOGIN</button>
+        <button onclick="closeAll()" style="color:red; background:none; border:none; margin-top:10px; cursor:pointer; width:100%;">BACK</button>
     </div>
 </div>
 
 <div id="stockLayer" class="overlay">
     <div style="width: 90%; max-width: 500px; border: 1px solid var(--cyber-blue); padding: 25px; background: #000;">
-        <h3 style="color: var(--cyber-blue); margin-top:0;">DASHBOARD CONTROL</h3>
-        <button id="mtToggleBtn" style="width:100%; padding:10px; margin-bottom:15px; font-weight:bold; cursor:pointer;" onclick="toggleMaintenance()">MAINTENANCE MODE</button>
-        <textarea id="inputStokBaru" rows="8" placeholder="Paste stok baru (Satu baris satu akun)"></textarea>
-        <button class="btn-main" style="background: var(--cyber-blue); clip-path:none;" onclick="simpanKeDatabase()">INJECT STOCK</button>
+        <button id="mtToggleBtn" style="width:100%; padding:10px; margin-bottom:15px; font-weight:bold;" onclick="toggleMaintenance()">MAINTENANCE</button>
+        <textarea id="inputStokBaru" rows="8" placeholder="Paste data akun per baris..."></textarea>
+        <button class="btn-main" style="background: var(--cyber-blue); clip-path:none;" onclick="simpanKeFirebase()">INJECT STOCK</button>
         <button onclick="closeAll()" style="color:red; background:none; border:none; margin-top:15px; cursor:pointer; width:100%;">LOGOUT</button>
     </div>
 </div>
 
 <script>
-    const KEY = "ELVOXI123344";
-    const CD_MINUTES = 25;
+    // === CONFIG FIREBASE TERPASANG ===
+    const firebaseConfig = {
+      apiKey: "AIzaSyDAWJEPRThp3OkXCNVngCglbov5S9qbGFg",
+      authDomain: "new-amprem.firebaseapp.com",
+      databaseURL: "https://new-amprem-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "new-amprem",
+      storageBucket: "new-amprem.firebasestorage.app",
+      messagingSenderId: "970310392389",
+      appId: "1:970310392389:web:e1046136a44337f13da12c",
+      measurementId: "G-6V9DD5DJSD"
+    };
 
-    let dataStok = JSON.parse(localStorage.getItem('v_stok_am')) || [];
-    let cooldownUser = localStorage.getItem('v_cd_am') || 0;
-    let isMaintenance = JSON.parse(localStorage.getItem('v_mt_status')) || false;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    function render() {
+    const PW = "ELVOXI123344";
+    const CD_MINS = 25;
+    let stokGlobal = [];
+    let isMT = false;
+
+    // SYNC DATABASE
+    db.ref('elvoxi_db').on('value', (snap) => {
+        const data = snap.val();
+        if (data) {
+            stokGlobal = data.stok || [];
+            isMT = data.mt || false;
+            updateUI();
+        } else {
+            db.ref('elvoxi_db').set({ stok: [], mt: false });
+        }
+    });
+
+    function updateUI() {
+        document.getElementById('stokSkrg').innerText = stokGlobal.length;
         const btn = document.getElementById('btnAmbil');
         const card = document.getElementById('mainCard');
-        document.getElementById('stokSkrg').innerText = dataStok.length;
-
-        if (isMaintenance) {
+        const mtBtn = document.getElementById('mtToggleBtn');
+        
+        if (isMT) {
             btn.innerText = "SYSTEM MAINTENANCE";
-            btn.classList.add('mt-active');
             btn.disabled = true;
+            btn.classList.add('mt-active');
             card.classList.add('maintenance');
-            document.getElementById('mtToggleBtn').innerText = "MAINTENANCE: ON";
-            document.getElementById('mtToggleBtn').style.background = "red";
+            mtBtn.innerText = "MAINTENANCE: ON";
+            mtBtn.style.background = "red";
         } else {
-            btn.innerText = "GET ACCESS NOW";
-            btn.classList.remove('mt-active');
+            btn.innerText = "GET ACCESS CODE";
             btn.disabled = false;
+            btn.classList.remove('mt-active');
             card.classList.remove('maintenance');
-            document.getElementById('mtToggleBtn').innerText = "MAINTENANCE: OFF";
-            document.getElementById('mtToggleBtn').style.background = "var(--warning)";
-            cekCD();
+            mtBtn.innerText = "MAINTENANCE: OFF";
+            mtBtn.style.background = "var(--warning)";
+            checkLimit();
         }
     }
 
-    function toggleMaintenance() {
-        isMaintenance = !isMaintenance;
-        localStorage.setItem('v_mt_status', isMaintenance);
-        render();
-    }
-
-    function cekCD() {
-        if (isMaintenance) return false;
-        const diff = Date.now() - cooldownUser;
+    function checkLimit() {
+        if (isMT) return;
+        const last = localStorage.getItem('v_cd') || 0;
+        const diff = Date.now() - last;
         const msg = document.getElementById('cooldownMsg');
-        if (diff < CD_MINUTES * 60 * 1000) {
-            const sisa = Math.ceil((CD_MINUTES * 60 * 1000 - diff) / 1000 / 60);
-            msg.innerText = `LOCKED: ${sisa} MIN REMAINING`;
-            msg.style.display = 'block';
+
+        if (diff < CD_MINS * 60 * 1000) {
+            const sisa = Math.ceil((CD_MINS * 60 * 1000 - diff) / 1000 / 60);
+            msg.innerText = `COOLDOWN: ${sisa} MIN`;
+            msg.style.display = "block";
             document.getElementById('btnAmbil').disabled = true;
-            return true;
+        } else {
+            msg.style.display = "none";
         }
-        msg.style.display = 'none';
-        return false;
     }
 
     function ambilStok() {
-        if (isMaintenance || cekCD()) return;
-        if (dataStok.length === 0) {
-            alert("HALO CUY KALI INI STOK LAGI HABIS TUNGU AJA");
-            return;
-        }
-        const item = dataStok.shift();
-        localStorage.setItem('v_stok_am', JSON.stringify(dataStok));
-        cooldownUser = Date.now();
-        localStorage.setItem('v_cd_am', cooldownUser);
+        if (stokGlobal.length === 0) return alert("STOK HABIS BRE!");
+        const item = stokGlobal.shift();
+        db.ref('elvoxi_db/stok').set(stokGlobal);
+        localStorage.setItem('v_cd', Date.now());
         document.getElementById('textHasil').innerText = item;
         document.getElementById('resultLayer').style.display = 'flex';
-        render();
+        updateUI();
     }
 
-    function copyText() {
-        navigator.clipboard.writeText(document.getElementById('textHasil').innerText);
-        alert("DATA BERHASIL DISALIN!");
+    function simpanKeFirebase() {
+        const txt = document.getElementById('inputStokBaru').value.trim();
+        if (!txt) return;
+        const baru = txt.split('\n').filter(i => i.trim() !== "");
+        db.ref('elvoxi_db/stok').set([...stokGlobal, ...baru]);
+        alert("INJECTED!");
+        document.getElementById('inputStokBaru').value = "";
     }
 
+    function toggleMaintenance() { db.ref('elvoxi_db/mt').set(!isMT); }
+    function copyText() { navigator.clipboard.writeText(document.getElementById('textHasil').innerText); alert("COPIED!"); }
     function closeResult() { document.getElementById('resultLayer').style.display = 'none'; }
     function showLogin() { document.getElementById('loginLayer').style.display = 'flex'; }
     function closeAll() { document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none'); }
-    
     function cekPassword() {
-        if (document.getElementById('passInput').value === KEY) {
+        if (document.getElementById('passInput').value === PW) {
             closeAll();
             document.getElementById('stockLayer').style.display = 'flex';
-        } else { alert("ACCESS DENIED!"); }
+        } else { alert("WRONG!"); }
     }
 
-    function simpanKeDatabase() {
-        const text = document.getElementById('inputStokBaru').value.trim();
-        if (!text) return;
-        const items = text.split('\n').filter(i => i.trim() !== "");
-        dataStok = [...dataStok, ...items];
-        localStorage.setItem('v_stok_am', JSON.stringify(dataStok));
-        alert("STOCK INJECTED!");
-        document.getElementById('inputStokBaru').value = "";
-        render();
-    }
-
-    render();
-    setInterval(render, 30000);
+    setInterval(checkLimit, 30000);
 </script>
-
 </body>
 </html>
