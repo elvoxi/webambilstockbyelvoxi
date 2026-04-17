@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-STOCK EXTREME | ELVOXI</title>
+    <style>
+        :root {
+            --neon: #00ff41;
+            --danger: #ff003c;
+            --cyber-blue: #00d4ff;
+            --bg: #050505;
+            --warning: #ffaa00;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at center, #111 0%, #050505 100%);
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .card {
+            background: rgba(15, 15, 15, 0.9);
+            border: 2px solid var(--neon);
+            box-shadow: 0 0 20px var(--neon);
+            border-radius: 5px;
+            padding: 40px;
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            z-index: 10;
+            transition: 0.5s;
+        }
+
+        /* Tampilan Maintenance */
+        .card.maintenance { border-color: var(--danger); box-shadow: 0 0 20px var(--danger); }
+
+        h1 { font-size: 1.5rem; letter-spacing: 3px; margin-bottom: 20px; text-shadow: 0 0 10px var(--neon); }
+        .maintenance h1 { text-shadow: 0 0 10px var(--danger); }
+
+        .stock-badge {
+            background: rgba(0, 255, 65, 0.1);
+            padding: 15px;
+            border: 1px dashed var(--neon);
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            color: var(--neon);
+        }
+        .maintenance .stock-badge { color: var(--danger); border-color: var(--danger); background: rgba(255, 0, 60, 0.1); }
+
+        .btn-main {
+            background: var(--neon);
+            color: black;
+            border: none;
+            padding: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            transition: 0.3s;
+            clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+        }
+
+        .btn-main:disabled { background: #333; color: #666; cursor: not-allowed; clip-path: none; }
+        .btn-main.mt-active { background: var(--danger); color: white; cursor: not-allowed; clip-path: none; }
+
+        /* MODAL & OVERLAY */
+        .overlay, .result-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 500;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+
+        .admin-box { width: 90%; max-width: 500px; border: 1px solid var(--cyber-blue); padding: 20px; background: #000; }
+        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--neon); padding: 12px; margin-bottom: 15px; box-sizing: border-box; outline: none; }
+
+        .btn-mt-toggle {
+            background: var(--warning);
+            color: black; padding: 10px; width: 100%; border: none; font-weight: bold; cursor: pointer; margin-bottom: 10px;
+        }
+
+        #cooldownMsg { color: var(--danger); margin-top: 15px; font-weight: bold; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<div class="card" id="mainCard">
+    <h1>SYSTEM <span id="brand" style="color: var(--neon);">RULES:
+    1 . JUAL STOCK AM PREM DIATAS 5K NGELANGAR KICK + NO REFF</span></h1>
+    <div class="stock-badge">STOCK: <span id="stokSkrg">0</span></div>
+    <button class="btn-main" id="btnAmbil" onclick="ambilStok()">AMBIL STOK AM PREM</button>
+    <div id="cooldownMsg" style="display: none;"></div>
+    <button onclick="showLogin()" style="background:none; border:none; color:#222; margin-top:20px; cursor:pointer; font-size: 10px;">[ ACCESS DATABASE ]</button>
+</div>
+
+<div id="resultLayer" class="result-overlay" style="display: none;">
+    <div style="background: #111; border: 2px solid var(--cyber-blue); padding: 25px; width: 80%; max-width: 400px; text-align: center;">
+        <h2 style="color: var(--cyber-blue)">SUCCESS!</h2>
+        <div id="textHasil" style="background:#000; padding:15px; margin:20px 0; word-break:break-all; border:1px solid #333; color:var(--cyber-blue);"></div>
+        <button class="btn-main" style="background:var(--cyber-blue); clip-path:none;" onclick="copyText()">COPY DATA</button>
+        <button onclick="closeResult()" style="background:none; border:none; color:grey; margin-top:15px; cursor:pointer;">CLOSE</button>
+    </div>
+</div>
+
+<div id="loginLayer" class="overlay">
+    <div style="width: 300px; border: 1px solid var(--neon); padding: 20px; background: #000;">
+        <h3 style="color: var(--neon)">ADMIN KEY</h3>
+        <input type="password" id="passInput" placeholder="PASSWORD">
+        <button class="btn-main" onclick="cekPassword()">LOGIN</button>
+        <button onclick="closeAll()" style="color:red; background:none; border:none; margin-top:10px; cursor:pointer;">CANCEL</button>
+    </div>
+</div>
+
+<div id="stockLayer" class="overlay">
+    <div class="admin-box">
+        <h3 style="color: var(--cyber-blue)">DASHBOARD</h3>
+        
+        <button id="mtToggleBtn" class="btn-mt-toggle" onclick="toggleMaintenance()">MAINTENANCE: OFF</button>
+        
+        <textarea id="inputStokBaru" rows="8" placeholder="Paste data akun per baris..."></textarea>
+        <button class="btn-main" style="background: var(--cyber-blue); clip-path:none;" onclick="simpanKeDatabase()">INJECT STOCK</button>
+        <button onclick="closeAll()" style="color:red; background:none; border:none; margin-top:15px; cursor:pointer; width:100%;">EXIT SYSTEM</button>
+    </div>
+</div>
+
+<script>
+    const KEY = "ELVOXI123344";
+    const CD_MINUTES = 25;
+
+    let dataStok = JSON.parse(localStorage.getItem('v_stok_am')) || [];
+    let cooldownUser = localStorage.getItem('v_cd_am') || 0;
+    let isMaintenance = JSON.parse(localStorage.getItem('v_mt_status')) || false;
+
+    function render() {
+        const btn = document.getElementById('btnAmbil');
+        const card = document.getElementById('mainCard');
+        const brand = document.getElementById('brand');
+        
+        document.getElementById('stokSkrg').innerText = dataStok.length;
+
+        if (isMaintenance) {
+            btn.innerText = "LAGI MAINTENANCE";
+            btn.classList.add('mt-active');
+            btn.disabled = true;
+            card.classList.add('maintenance');
+            brand.style.color = "var(--danger)";
+            document.getElementById('mtToggleBtn').innerText = "MAINTENANCE: ON (CLICK TO OFF)";
+            document.getElementById('mtToggleBtn').style.background = "red";
+            document.getElementById('mtToggleBtn').style.color = "white";
+        } else {
+            btn.innerText = "GET AM PREM";
+            btn.classList.remove('mt-active');
+            btn.disabled = false;
+            card.classList.remove('maintenance');
+            brand.style.color = "var(--neon)";
+            document.getElementById('mtToggleBtn').innerText = "MAINTENANCE: OFF (CLICK TO ON)";
+            document.getElementById('mtToggleBtn').style.background = "var(--warning)";
+            document.getElementById('mtToggleBtn').style.color = "black";
+            cekCD();
+        }
+    }
+
+    function toggleMaintenance() {
+        isMaintenance = !isMaintenance;
+        localStorage.setItem('v_mt_status', isMaintenance);
+        render();
+        alert("Status Maintenance Berhasil Diubah!");
+    }
+
+    function cekCD() {
+        if (isMaintenance) return false;
+        const skrg = Date.now();
+        const diff = skrg - cooldownUser;
+        const msg = document.getElementById('cooldownMsg');
+
+        if (diff < CD_MINUTES * 60 * 1000) {
+            const sisa = Math.ceil((CD_MINUTES * 60 * 1000 - diff) / 1000 / 60);
+            msg.innerText = `COOLDOWN: WAIT ${sisa} MINUTES`;
+            msg.style.display = 'block';
+            document.getElementById('btnAmbil').disabled = true;
+            return true;
+        }
+        msg.style.display = 'none';
+        return false;
+    }
+
+    function ambilStok() {
+        if (isMaintenance) return;
+        if (cekCD()) return;
+        if (dataStok.length === 0) {
+            alert("HALO CUY KALI INI STOK LAGI HABIS TUNGU AJA");
+            return;
+        }
+
+        const item = dataStok.shift();
+        localStorage.setItem('v_stok_am', JSON.stringify(dataStok));
+        cooldownUser = Date.now();
+        localStorage.setItem('v_cd_am', cooldownUser);
+
+        document.getElementById('textHasil').innerText = item;
+        document.getElementById('resultLayer').style.display = 'flex';
+        render();
+    }
+
+    function copyText() {
+        navigator.clipboard.writeText(document.getElementById('textHasil').innerText);
+        alert("COPIED!");
+    }
+
+    function closeResult() { document.getElementById('resultLayer').style.display = 'none'; }
+    function showLogin() { document.getElementById('loginLayer').style.display = 'flex'; }
+    function closeAll() { document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none'); }
+    
+    function cekPassword() {
+        if (document.getElementById('passInput').value === KEY) {
+            closeAll();
+            document.getElementById('stockLayer').style.display = 'flex';
+        } else { alert("WRONG KEY!"); }
+    }
+
+    function simpanKeDatabase() {
+        const text = document.getElementById('inputStokBaru').value.trim();
+        if (!text) return;
+        const items = text.split('\n').filter(i => i.trim() !== "");
+        dataStok = [...dataStok, ...items];
+        localStorage.setItem('v_stok_am', JSON.stringify(dataStok));
+        alert("DATABASE UPDATED!");
+        document.getElementById('inputStokBaru').value = "";
+        render();
+    }
+
+    render();
+    setInterval(render, 30000);
+</script>
+
+</body>
+</html>
